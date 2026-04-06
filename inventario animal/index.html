@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventario Finca — Sistema Ganadero y Avícola</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0f1110;
+  --bg2: #171c1a;
+  --bg3: #1e2523;
+  --bg4: #263230;
+  --border: #2a3634;
+  --text: #e8ede9;
+  --text2: #9bada5;
+  --text3: #5e746d;
+  --accent: #4ae68e;
+  --accent2: #2bb868;
+  --accent-dim: rgba(74,230,142,0.1);
+  --warn: #e6a94a;
+  --danger: #e6564a;
+  --info: #4a9ee6;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  --font: 'DM Sans', sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --sidebar-w: 260px;
+  --transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);overflow-x:hidden;min-height:100vh;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px;}
+
+/* ─── SIDEBAR ─── */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;transition:var(--transition);}
+.sidebar-brand{padding:24px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.sidebar-brand .logo{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.sidebar-brand h1{font-family:var(--font-display);font-size:18px;font-weight:700;line-height:1.1;}
+.sidebar-brand span{font-size:11px;color:var(--text2);font-weight:400;font-family:var(--font);}
+.sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto;}
+.nav-section{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);padding:16px 12px 6px;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:14px;color:var(--text2);transition:var(--transition);margin:2px 0;font-weight:500;}
+.nav-item:hover{background:var(--bg3);color:var(--text);}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:600;}
+.nav-item .icon{width:20px;text-align:center;font-size:16px;}
+.nav-item .badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;}
+
+/* ─── MAIN ─── */
+.main{margin-left:var(--sidebar-w);min-height:100vh;transition:var(--transition);}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);}
+.topbar h2{font-family:var(--font-display);font-size:22px;}
+.topbar-actions{display:flex;gap:10px;align-items:center;}
+.content{padding:28px 32px;}
+
+/* ─── CARDS & STATS ─── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:28px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:var(--transition);}
+.stat-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 32px rgba(74,230,142,0.07);}
+.stat-card .stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;}
+.stat-card .stat-value{font-size:28px;font-weight:700;font-family:var(--font-display);}
+.stat-card .stat-label{font-size:12px;color:var(--text2);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.icon-green{background:rgba(74,230,142,0.12);color:var(--accent);}
+.icon-blue{background:rgba(74,158,230,0.12);color:var(--info);}
+.icon-yellow{background:rgba(230,169,74,0.12);color:var(--warn);}
+.icon-red{background:rgba(230,86,74,0.12);color:var(--danger);}
+
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px;}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+.chart-card h3{font-size:15px;margin-bottom:16px;color:var(--text2);font-weight:600;}
+.chart-card canvas{width:100%!important;max-height:240px;}
+
+/* ─── TABLE ─── */
+.table-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.table-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;}
+.table-header h3{font-size:16px;font-weight:600;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;padding:10px 16px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);border-bottom:1px solid var(--border);font-weight:600;white-space:nowrap;}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid var(--border);color:var(--text2);}
+tr:hover td{background:var(--bg3);color:var(--text);}
+.empty-state{padding:48px;text-align:center;color:var(--text3);font-size:14px;}
+
+/* ─── FORMS ─── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:var(--transition);font-family:var(--font);}
+.btn-primary{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.btn-primary:hover{background:var(--accent2);border-color:var(--accent2);}
+.btn-secondary{background:var(--bg3);color:var(--text);border-color:var(--border);}
+.btn-secondary:hover{background:var(--bg4);border-color:var(--text3);}
+.btn-danger{background:transparent;color:var(--danger);border-color:var(--danger);}
+.btn-danger:hover{background:var(--danger);color:#fff;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-icon{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:var(--transition);}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent);}
+
+input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--text);font-family:var(--font);width:100%;transition:var(--transition);outline:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(74,230,142,0.1);}
+textarea{resize:vertical;min-height:80px;}
+label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;}
+.form-group{margin-bottom:16px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+
+.search-box{position:relative;max-width:300px;}
+.search-box input{padding-left:36px;}
+.search-box::before{content:"🔍";position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;}
+
+.filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.filter-bar select{width:auto;min-width:140px;}
+
+/* ─── MODAL ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:200;padding:20px;}
+.modal-overlay.active{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--border);}
+.modal-header h3{font-size:18px;font-family:var(--font-display);}
+.modal-body{padding:24px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--border);}
+
+/* ─── BADGES ─── */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+.badge-active{background:rgba(74,230,142,0.12);color:var(--accent);}
+.badge-enfermo{background:rgba(230,86,74,0.12);color:var(--danger);}
+.badge-vendido{background:rgba(74,158,230,0.12);color:var(--info);}
+.badge-muerto{background:rgba(100,100,100,0.2);color:#888;}
+.badge-pendiente{background:rgba(230,169,74,0.12);color:var(--warn);}
+.badge-exitosa{background:rgba(74,230,142,0.12);color:var(--accent);}
+.badge-fallida{background:rgba(230,86,74,0.12);color:var(--danger);}
+
+/* ─── DETAIL PANEL ─── */
+.detail-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;}
+.detail-header{display:flex;align-items:center;gap:20px;padding:24px;border-bottom:1px solid var(--border);}
+.detail-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;}
+.detail-info h2{font-family:var(--font-display);font-size:24px;}
+.detail-info p{color:var(--text2);font-size:13px;margin-top:4px;}
+.detail-meta{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;padding:20px 24px;}
+.meta-item label{font-size:10px;margin-bottom:2px;}
+.meta-item span{font-size:14px;font-weight:600;color:var(--text);}
+
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 24px;overflow-x:auto;}
+.tab{padding:12px 20px;font-size:13px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;font-weight:500;transition:var(--transition);white-space:nowrap;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--accent);border-color:var(--accent);}
+.tab-content{padding:24px;display:none;}
+.tab-content.active{display:block;}
+
+/* ─── TOASTS ─── */
+.toast-container{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:10px;}
+.toast{background:var(--bg3);border:1px solid var(--accent);border-radius:var(--radius-sm);padding:14px 20px;font-size:13px;box-shadow:var(--shadow);animation:slideIn .3s ease;max-width:350px;}
+.toast.error{border-color:var(--danger);}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ─── RESPONSIVE ─── */
+.menu-toggle{display:none;background:none;border:none;color:var(--text);font-size:24px;cursor:pointer;}
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;}
+  .menu-toggle{display:block;}
+  .charts-row{grid-template-columns:1fr;}
+  .form-row,.form-row-3{grid-template-columns:1fr;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:600px){
+  .content{padding:16px;}
+  .topbar{padding:12px 16px;}
+  .stats-grid{grid-template-columns:1fr;}
+}
+
+/* Section visibility */
+.section{display:none;}
+.section.active{display:block;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo">🐄</div>
+    <div><h1>Inventario<br>Finca</h1><span>Sistema Ganadero</span></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" data-section="dashboard"><span class="icon">📊</span>Dashboard</div>
+    <div class="nav-section">Gestión Animal</div>
+    <div class="nav-item" data-section="bovinos"><span class="icon">🐄</span>Bovinos</div>
+    <div class="nav-item" data-section="avicolas"><span class="icon">🐔</span>Avícolas</div>
+    <div class="nav-section">Producción</div>
+    <div class="nav-item" data-section="leche"><span class="icon">🥛</span>Producción Leche</div>
+    <div class="nav-item" data-section="huevos"><span class="icon">🥚</span>Producción Huevos</div>
+    <div class="nav-section">Salud & Reproducción</div>
+    <div class="nav-item" data-section="vacunacion"><span class="icon">💉</span>Vacunación<span class="badge" id="badge-vacunas" style="display:none"></span></div>
+    <div class="nav-item" data-section="salud"><span class="icon">🏥</span>Eventos Salud</div>
+    <div class="nav-item" data-section="inseminacion"><span class="icon">🧬</span>Inseminación</div>
+    <div class="nav-section">Análisis</div>
+    <div class="nav-item" data-section="reportes"><span class="icon">📈</span>Reportes</div>
+  </nav>
+</aside>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <h2 id="page-title">Dashboard</h2>
+    </div>
+    <div class="topbar-actions">
+      <span style="font-size:12px;color:var(--text3)" id="current-date"></span>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- ════════════ DASHBOARD ════════════ -->
+    <div class="section active" id="sec-dashboard">
+      <div class="stats-grid" id="dash-stats"></div>
+      <div class="charts-row">
+        <div class="chart-card"><h3>📈 Producción de Leche (7 días)</h3><canvas id="chart-leche"></canvas></div>
+        <div class="chart-card"><h3>📈 Producción de Huevos (7 días)</h3><canvas id="chart-huevos"></canvas></div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card"><h3>🐄 Distribución por Categoría</h3><canvas id="chart-categorias"></canvas></div>
+        <div class="chart-card"><h3>💉 Próximas Vacunaciones</h3><div id="dash-vacunas-list"></div></div>
+      </div>
+    </div>
+
+    <!-- ════════════ BOVINOS ════════════ -->
+    <div class="section" id="sec-bovinos">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>🐄 Inventario Bovino</h3>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <div class="search-box"><input type="text" placeholder="Buscar..." id="search-bovinos" oninput="loadAnimales('bovino')"></div>
+            <select id="filter-estado-bovinos" onchange="loadAnimales('bovino')">
+              <option value="">Todos los estados</option>
+              <option value="activo">Activo</option>
+              <option value="enfermo">Enfermo</option>
+              <option value="vendido">Vendido</option>
+            </select>
+            <button class="btn btn-primary" onclick="openAnimalModal('bovino')">＋ Nuevo Bovino</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table><thead><tr><th>Código</th><th>Nombre</th><th>Categoría</th><th>Raza</th><th>Sexo</th><th>Peso (kg)</th><th>Edad</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="table-bovinos"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ AVÍCOLAS ════════════ -->
+    <div class="section" id="sec-avicolas">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>🐔 Inventario Avícola</h3>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <div class="search-box"><input type="text" placeholder="Buscar..." id="search-avicolas" oninput="loadAnimales('avicola')"></div>
+            <button class="btn btn-primary" onclick="openAnimalModal('avicola')">＋ Nuevo Lote/Ave</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table><thead><tr><th>Código</th><th>Nombre</th><th>Categoría</th><th>Raza</th><th>Sexo</th><th>Peso (kg)</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="table-avicolas"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ DETALLE ANIMAL ════════════ -->
+    <div class="section" id="sec-detalle">
+      <button class="btn btn-secondary" onclick="goBack()" style="margin-bottom:16px;">← Volver</button>
+      <div id="animal-detail"></div>
+    </div>
+
+    <!-- ════════════ PRODUCCIÓN LECHE ════════════ -->
+    <div class="section" id="sec-leche">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="openLecheModal()">＋ Registrar Producción</button>
+        <input type="date" id="leche-desde" style="width:auto;">
+        <input type="date" id="leche-hasta" style="width:auto;">
+        <button class="btn btn-secondary" onclick="loadLeche()">Filtrar</button>
+      </div>
+      <div class="chart-card" style="margin-bottom:20px;"><h3>Producción Diaria</h3><canvas id="chart-leche-detail"></canvas></div>
+      <div class="table-card">
+        <div style="overflow-x:auto;">
+          <table><thead><tr><th>Fecha</th><th>Animal</th><th>Litros</th><th>Turno</th><th>Calidad</th></tr></thead>
+          <tbody id="table-leche"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ PRODUCCIÓN HUEVOS ════════════ -->
+    <div class="section" id="sec-huevos">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="openHuevosModal()">＋ Registrar Producción</button>
+        <input type="date" id="huevos-desde" style="width:auto;">
+        <input type="date" id="huevos-hasta" style="width:auto;">
+        <button class="btn btn-secondary" onclick="loadHuevos()">Filtrar</button>
+      </div>
+      <div class="chart-card" style="margin-bottom:20px;"><h3>Producción Diaria</h3><canvas id="chart-huevos-detail"></canvas></div>
+      <div class="table-card">
+        <div style="overflow-x:auto;">
+          <table><thead><tr><th>Fecha</th><th>Lote</th><th>Cantidad</th><th>Rotos</th><th>Peso Prom. (g)</th></tr></thead>
+          <tbody id="table-huevos"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ VACUNACIÓN ════════════ -->
+    <div class="section" id="sec-vacunacion">
+      <div style="display:flex;gap:10px;margin-bottom:20px;">
+        <button class="btn btn-primary" onclick="openVacunacionModal()">＋ Registrar Vacunación</button>
+      </div>
+      <div class="charts-row" style="margin-bottom:20px;">
+        <div class="table-card">
+          <div class="table-header"><h3>⚠️ Próximas Vacunaciones (30 días)</h3></div>
+          <div style="overflow-x:auto;">
+            <table><thead><tr><th>Animal</th><th>Vacuna</th><th>Próxima Fecha</th></tr></thead>
+            <tbody id="table-vacunas-proximas"></tbody></table>
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>📋 Historial Reciente</h3></div>
+          <div style="overflow-x:auto;">
+            <table><thead><tr><th>Fecha</th><th>Animal</th><th>Vacuna</th><th>Veterinario</th></tr></thead>
+            <tbody id="table-vacunaciones"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ SALUD ════════════ -->
+    <div class="section" id="sec-salud">
+      <button class="btn btn-primary" onclick="openSaludModal()" style="margin-bottom:20px;">＋ Registrar Evento</button>
+      <div class="table-card">
+        <div style="overflow-x:auto;">
+          <table><thead><tr><th>Fecha</th><th>Animal</th><th>Tipo</th><th>Descripción</th><th>Veterinario</th><th>Costo</th><th>Estado</th></tr></thead>
+          <tbody id="table-salud"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ INSEMINACIÓN ════════════ -->
+    <div class="section" id="sec-inseminacion">
+      <button class="btn btn-primary" onclick="openInseminacionModal()" style="margin-bottom:20px;">＋ Registrar Inseminación</button>
+      <div class="table-card">
+        <div style="overflow-x:auto;">
+          <table><thead><tr><th>Fecha</th><th>Animal</th><th>Toro/Pajilla</th><th>Técnico</th><th>Resultado</th><th>Parto Est.</th><th>Acciones</th></tr></thead>
+          <tbody id="table-inseminacion"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ REPORTES ════════════ -->
+    <div class="section" id="sec-reportes">
+      <div class="stats-grid" id="reporte-inv"></div>
+      <div class="charts-row">
+        <div class="chart-card"><h3>Producción Leche Mensual</h3><canvas id="chart-leche-mensual"></canvas></div>
+        <div class="chart-card"><h3>Producción Huevos Mensual</h3><canvas id="chart-huevos-mensual"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GLOBAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-title">Modal</h3><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// CONFIG & GLOBALS
+// ═══════════════════════════════════════════════
+const API = 'api.php'; // Adjust path as needed
+let charts = {};
+let lastSection = 'dashboard';
+let currentAnimalType = 'bovino';
+let allAnimales = [];
+
+// For demo mode (no backend), set DEMO = true
+const DEMO = true;
+
+// Demo data store
+const DEMO_DATA = {
+  animales: [
+    {id:1,codigo:'BOV-001',nombre:'Luna',categoria_id:1,tipo:'bovino',raza:'Holstein',sexo:'hembra',fecha_nacimiento:'2020-03-15',peso_actual:520.5,estado:'activo',categoria_nombre:'Vaca lechera'},
+    {id:2,codigo:'BOV-002',nombre:'Estrella',categoria_id:1,tipo:'bovino',raza:'Jersey',sexo:'hembra',fecha_nacimiento:'2019-08-22',peso_actual:480.0,estado:'activo',categoria_nombre:'Vaca lechera'},
+    {id:3,codigo:'BOV-003',nombre:'Tornado',categoria_id:2,tipo:'bovino',raza:'Brahman',sexo:'macho',fecha_nacimiento:'2018-01-10',peso_actual:850.0,estado:'activo',categoria_nombre:'Toro reproductor'},
+    {id:4,codigo:'BOV-004',nombre:'Mariposa',categoria_id:3,tipo:'bovino',raza:'Holstein',sexo:'hembra',fecha_nacimiento:'2022-06-05',peso_actual:320.0,estado:'activo',categoria_nombre:'Novilla'},
+    {id:5,codigo:'BOV-005',nombre:'Relámpago',categoria_id:4,tipo:'bovino',raza:'Brahman',sexo:'macho',fecha_nacimiento:'2023-11-20',peso_actual:180.0,estado:'activo',categoria_nombre:'Ternero'},
+    {id:6,codigo:'AVE-001',nombre:'Lote Ponedoras A',categoria_id:5,tipo:'avicola',raza:'Hy-Line Brown',sexo:'hembra',fecha_nacimiento:'2023-01-15',peso_actual:1.8,estado:'activo',categoria_nombre:'Gallina ponedora'},
+    {id:7,codigo:'AVE-002',nombre:'Lote Ponedoras B',categoria_id:5,tipo:'avicola',raza:'Lohmann Brown',sexo:'hembra',fecha_nacimiento:'2023-04-20',peso_actual:1.9,estado:'activo',categoria_nombre:'Gallina ponedora'},
+    {id:8,codigo:'AVE-003',nombre:'Lote Engorde 1',categoria_id:7,tipo:'avicola',raza:'Ross 308',sexo:'macho',fecha_nacimiento:'2024-01-05',peso_actual:2.5,estado:'activo',categoria_nombre:'Pollo de engorde'},
+  ],
+  categorias: [
+    {id:1,nombre:'Vaca lechera',tipo:'bovino'},{id:2,nombre:'Toro reproductor',tipo:'bovino'},
+    {id:3,nombre:'Novilla',tipo:'bovino'},{id:4,nombre:'Ternero',tipo:'bovino'},
+    {id:5,nombre:'Gallina ponedora',tipo:'avicola'},{id:6,nombre:'Gallo',tipo:'avicola'},{id:7,nombre:'Pollo de engorde',tipo:'avicola'}
+  ],
+  vacunas: [
+    {id:1,nombre:'Fiebre Aftosa',tipo_animal:'bovino'},{id:2,nombre:'Brucelosis',tipo_animal:'bovino'},
+    {id:3,nombre:'Carbón Sintomático',tipo_animal:'bovino'},{id:4,nombre:'Triple Aviar',tipo_animal:'avicola'},
+    {id:5,nombre:'Marek',tipo_animal:'avicola'},{id:6,nombre:'Rabia',tipo_animal:'ambos'}
+  ]
+};
+
+function daysAgo(n){ const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString().split('T')[0]; }
+function daysLater(n){ const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().split('T')[0]; }
+
+const demoLeche = [];
+for(let d=6;d>=0;d--){
+  demoLeche.push({fecha:daysAgo(d),animal_nombre:'Luna',codigo:'BOV-001',cantidad_litros:20+Math.random()*5,turno:'am',calidad:'normal'});
+  demoLeche.push({fecha:daysAgo(d),animal_nombre:'Luna',codigo:'BOV-001',cantidad_litros:16+Math.random()*4,turno:'pm',calidad:'normal'});
+  demoLeche.push({fecha:daysAgo(d),animal_nombre:'Estrella',codigo:'BOV-002',cantidad_litros:17+Math.random()*4,turno:'am',calidad:'normal'});
+  demoLeche.push({fecha:daysAgo(d),animal_nombre:'Estrella',codigo:'BOV-002',cantidad_litros:13+Math.random()*4,turno:'pm',calidad:'normal'});
+}
+const demoHuevos = [];
+for(let d=6;d>=0;d--){
+  demoHuevos.push({fecha:daysAgo(d),lote_nombre:'Lote Ponedoras A',codigo:'AVE-001',cantidad:140+Math.floor(Math.random()*20),rotos:Math.floor(Math.random()*5),peso_promedio:61+Math.random()*3});
+  demoHuevos.push({fecha:daysAgo(d),lote_nombre:'Lote Ponedoras B',codigo:'AVE-002',cantidad:125+Math.floor(Math.random()*15),rotos:Math.floor(Math.random()*4),peso_promedio:59+Math.random()*3});
+}
+const demoVacunaciones = [
+  {animal_nombre:'Luna',codigo:'BOV-001',vacuna_nombre:'Fiebre Aftosa',fecha_aplicacion:daysAgo(90),proxima_fecha:daysLater(90),veterinario:'Dr. García'},
+  {animal_nombre:'Luna',codigo:'BOV-001',vacuna_nombre:'Brucelosis',fecha_aplicacion:daysAgo(180),proxima_fecha:daysLater(185),veterinario:'Dr. García'},
+  {animal_nombre:'Estrella',codigo:'BOV-002',vacuna_nombre:'Fiebre Aftosa',fecha_aplicacion:daysAgo(90),proxima_fecha:daysLater(90),veterinario:'Dr. García'},
+  {animal_nombre:'Tornado',codigo:'BOV-003',vacuna_nombre:'Fiebre Aftosa',fecha_aplicacion:daysAgo(60),proxima_fecha:daysLater(10),veterinario:'Dr. López'},
+  {animal_nombre:'Lote Ponedoras A',codigo:'AVE-001',vacuna_nombre:'Triple Aviar',fecha_aplicacion:daysAgo(30),proxima_fecha:daysLater(5),veterinario:'Dr. Martínez'},
+];
+const demoInseminaciones = [
+  {id:1,animal_nombre:'Luna',codigo:'BOV-001',fecha:daysAgo(60),toro_pajilla:'Holstein Elite #4521',tecnico:'Téc. Rodríguez',resultado:'exitosa',fecha_parto_estimada:daysLater(223)},
+  {id:2,animal_nombre:'Estrella',codigo:'BOV-002',fecha:daysAgo(15),toro_pajilla:'Jersey Premium #1102',tecnico:'Téc. Rodríguez',resultado:'pendiente',fecha_parto_estimada:null},
+  {id:3,animal_nombre:'Mariposa',codigo:'BOV-004',fecha:daysAgo(30),toro_pajilla:'Holstein Elite #4521',tecnico:'Téc. Pérez',resultado:'fallida',fecha_parto_estimada:null},
+];
+
+// ═══════════════════════════════════════════════
+// API HELPER
+// ═══════════════════════════════════════════════
+async function api(module, action='', params={}, method='GET', body=null) {
+  if (DEMO) return demoAPI(module, action, params, method, body);
+  let url = `${API}?module=${module}&action=${action}`;
+  Object.entries(params).forEach(([k,v]) => url += `&${k}=${encodeURIComponent(v)}`);
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
+function demoAPI(module, action, params, method, body) {
+  if (module === 'dashboard') {
+    const bovinos = DEMO_DATA.animales.filter(a=>a.tipo==='bovino'&&a.estado==='activo');
+    const avicolas = DEMO_DATA.animales.filter(a=>a.tipo==='avicola'&&a.estado==='activo');
+    const lecheHoy = demoLeche.filter(l=>l.fecha===daysAgo(0)).reduce((s,l)=>s+l.cantidad_litros,0);
+    const huevosHoy = demoHuevos.filter(h=>h.fecha===daysAgo(0)).reduce((s,h)=>s+h.cantidad,0);
+    const leche7 = {};
+    demoLeche.forEach(l=>{leche7[l.fecha]=(leche7[l.fecha]||0)+l.cantidad_litros;});
+    const huevos7 = {};
+    demoHuevos.forEach(h=>{huevos7[h.fecha]=(huevos7[h.fecha]||0)+h.cantidad;});
+    const catCount = {};
+    DEMO_DATA.animales.filter(a=>a.estado==='activo').forEach(a=>{catCount[a.categoria_nombre]=(catCount[a.categoria_nombre]||0)+1;});
+    return {
+      total_bovinos: bovinos.length, total_avicolas: avicolas.length,
+      leche_hoy: Math.round(lecheHoy*10)/10, huevos_hoy: huevosHoy,
+      vacunas_pendientes: 2, animales_enfermos: 0, inseminaciones_pendientes: 1, partos_proximos: 1,
+      leche_7dias: Object.entries(leche7).map(([fecha,total])=>({fecha,total:Math.round(total*10)/10})),
+      huevos_7dias: Object.entries(huevos7).map(([fecha,total])=>({fecha,total})),
+      por_categoria: Object.entries(catCount).map(([nombre,total])=>({nombre,total}))
+    };
+  }
+  if (module === 'animales' && action === 'list') {
+    let data = DEMO_DATA.animales.filter(a=>a.tipo===params.tipo);
+    if (params.estado) data = data.filter(a=>a.estado===params.estado);
+    if (params.buscar) { const q=params.buscar.toLowerCase(); data=data.filter(a=>(a.codigo+a.nombre+a.raza).toLowerCase().includes(q)); }
+    return data;
+  }
+  if (module === 'animales' && action === 'get') {
+    const a = DEMO_DATA.animales.find(x=>x.id==params.id);
+    if (!a) return {error:'No encontrado'};
+    a.historial_peso = [{peso:a.peso_actual*0.9,fecha:daysAgo(180)},{peso:a.peso_actual*0.95,fecha:daysAgo(90)},{peso:a.peso_actual,fecha:daysAgo(0)}];
+    a.vacunaciones = demoVacunaciones.filter(v=>v.codigo===a.codigo);
+    a.eventos_salud = [];
+    a.inseminaciones = demoInseminaciones.filter(i=>i.codigo===a.codigo);
+    return a;
+  }
+  if (module === 'categorias') {
+    let data = DEMO_DATA.categorias;
+    if (params.tipo) data = data.filter(c=>c.tipo===params.tipo);
+    return data;
+  }
+  if (module === 'leche') return demoLeche;
+  if (module === 'huevos') return demoHuevos;
+  if (module === 'vacunacion' && action === 'vacunas') return DEMO_DATA.vacunas;
+  if (module === 'reportes' && action === 'vacunas_proximas') return demoVacunaciones.filter(v=>v.proxima_fecha<=daysLater(30));
+  if (module === 'reportes' && action === 'inventario_general') {
+    const inv = {};
+    DEMO_DATA.animales.forEach(a=>{const k=a.tipo+'|'+a.estado;inv[k]=(inv[k]||0)+1;});
+    return Object.entries(inv).map(([k,total])=>{const [tipo,estado]=k.split('|');return{tipo,estado,total};});
+  }
+  if (module === 'reportes' && action === 'produccion_leche_mensual') return [{mes:daysAgo(0).substring(0,7),total:2800}];
+  if (module === 'reportes' && action === 'produccion_huevos_mensual') return [{mes:daysAgo(0).substring(0,7),total:3800}];
+  if (module === 'inseminacion') return demoInseminaciones;
+  return {message:'OK'};
+}
+
+// ═══════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════
+function toast(msg, error=false) {
+  const div = document.createElement('div');
+  div.className = 'toast' + (error ? ' error' : '');
+  div.textContent = msg;
+  document.getElementById('toasts').appendChild(div);
+  setTimeout(() => div.remove(), 3500);
+}
+function formatDate(d) { if(!d) return '—'; return new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}); }
+function calcAge(d) {
+  if (!d) return '—';
+  const born = new Date(d); const now = new Date();
+  let y = now.getFullYear()-born.getFullYear();
+  let m = now.getMonth()-born.getMonth();
+  if (m<0){y--;m+=12;}
+  return y > 0 ? `${y}a ${m}m` : `${m}m`;
+}
+function badgeHTML(val) { return `<span class="badge badge-${val}">${val}</span>`; }
+function closeModal() { document.getElementById('modal').classList.remove('active'); }
+function openModal(title, bodyHTML, footerHTML='') {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHTML;
+  document.getElementById('modal-footer').innerHTML = footerHTML;
+  document.getElementById('modal').classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+const titles = {dashboard:'Dashboard',bovinos:'Bovinos',avicolas:'Avícolas',leche:'Producción de Leche',huevos:'Producción de Huevos',vacunacion:'Vacunación',salud:'Eventos de Salud',inseminacion:'Inseminación Artificial',reportes:'Reportes',detalle:'Detalle Animal'};
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const sec = item.dataset.section;
+    navigateTo(sec);
+    document.getElementById('sidebar').classList.remove('open');
+  });
+});
+
+function navigateTo(sec) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`sec-${sec}`).classList.add('active');
+  const navItem = document.querySelector(`.nav-item[data-section="${sec}"]`);
+  if (navItem) navItem.classList.add('active');
+  document.getElementById('page-title').textContent = titles[sec] || sec;
+  if (sec !== 'detalle') lastSection = sec;
+  loadSectionData(sec);
+}
+
+function goBack() { navigateTo(lastSection); }
+
+async function loadSectionData(sec) {
+  if (sec === 'dashboard') loadDashboard();
+  else if (sec === 'bovinos') loadAnimales('bovino');
+  else if (sec === 'avicolas') loadAnimales('avicola');
+  else if (sec === 'leche') loadLeche();
+  else if (sec === 'huevos') loadHuevos();
+  else if (sec === 'vacunacion') loadVacunacion();
+  else if (sec === 'inseminacion') loadInseminacion();
+  else if (sec === 'reportes') loadReportes();
+}
+
+// ═══════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════
+async function loadDashboard() {
+  const d = await api('dashboard');
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon icon-green">🐄</div><div class="stat-value">${d.total_bovinos}</div><div class="stat-label">Bovinos Activos</div></div>
+    <div class="stat-card"><div class="stat-icon icon-blue">🐔</div><div class="stat-value">${d.total_avicolas}</div><div class="stat-label">Avícolas Activos</div></div>
+    <div class="stat-card"><div class="stat-icon icon-green">🥛</div><div class="stat-value">${d.leche_hoy}</div><div class="stat-label">Litros Leche Hoy</div></div>
+    <div class="stat-card"><div class="stat-icon icon-yellow">🥚</div><div class="stat-value">${d.huevos_hoy}</div><div class="stat-label">Huevos Hoy</div></div>
+    <div class="stat-card"><div class="stat-icon icon-yellow">💉</div><div class="stat-value">${d.vacunas_pendientes}</div><div class="stat-label">Vacunas Próximas</div></div>
+    <div class="stat-card"><div class="stat-icon icon-red">🏥</div><div class="stat-value">${d.animales_enfermos}</div><div class="stat-label">Enfermos</div></div>
+    <div class="stat-card"><div class="stat-icon icon-blue">🧬</div><div class="stat-value">${d.inseminaciones_pendientes}</div><div class="stat-label">Inseminaciones Pend.</div></div>
+    <div class="stat-card"><div class="stat-icon icon-green">🐣</div><div class="stat-value">${d.partos_proximos}</div><div class="stat-label">Partos Próximos (30d)</div></div>
+  `;
+  // Badge
+  if (d.vacunas_pendientes > 0) { document.getElementById('badge-vacunas').style.display=''; document.getElementById('badge-vacunas').textContent=d.vacunas_pendientes; }
+
+  // Charts
+  buildChart('chart-leche','line',d.leche_7dias.map(r=>r.fecha.substring(5)),d.leche_7dias.map(r=>r.total),'Litros','rgba(74,230,142,0.2)','#4ae68e');
+  buildChart('chart-huevos','bar',d.huevos_7dias.map(r=>r.fecha.substring(5)),d.huevos_7dias.map(r=>r.total),'Huevos','rgba(230,169,74,0.3)','#e6a94a');
+
+  // Doughnut
+  if (charts['chart-categorias']) charts['chart-categorias'].destroy();
+  const colors = ['#4ae68e','#4a9ee6','#e6a94a','#e6564a','#ae6ef5','#f06292','#4dd0e1'];
+  charts['chart-categorias'] = new Chart(document.getElementById('chart-categorias'), {
+    type:'doughnut',
+    data:{labels:d.por_categoria.map(c=>c.nombre),datasets:[{data:d.por_categoria.map(c=>c.total),backgroundColor:colors.slice(0,d.por_categoria.length),borderWidth:0}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#9bada5',font:{size:11}}}}}
+  });
+
+  // Próximas vacunas
+  const vac = await api('reportes','vacunas_proximas');
+  document.getElementById('dash-vacunas-list').innerHTML = vac.length ? vac.map(v=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>${v.animal_nombre} — ${v.vacuna_nombre}</span><span style="color:var(--warn)">${formatDate(v.proxima_fecha)}</span></div>`).join('') : '<div class="empty-state">Sin vacunas próximas</div>';
+}
+
+function buildChart(id,type,labels,data,label,bg,border) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), {
+    type, data:{labels,datasets:[{label,data,backgroundColor:bg,borderColor:border,borderWidth:2,fill:true,tension:0.3,pointRadius:3,borderRadius:type==='bar'?6:0}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#5e746d',font:{size:10}},grid:{color:'rgba(42,54,52,0.5)'}},y:{ticks:{color:'#5e746d',font:{size:10}},grid:{color:'rgba(42,54,52,0.5)'}}}}
+  });
+}
+
+// ═══════════════════════════════════════════════
+// ANIMALES
+// ═══════════════════════════════════════════════
+async function loadAnimales(tipo) {
+  currentAnimalType = tipo;
+  const buscar = document.getElementById(`search-${tipo==='bovino'?'bovinos':'avicolas'}`)?.value || '';
+  const estado = document.getElementById(`filter-estado-${tipo==='bovino'?'bovinos':'avicolas'}`)?.value || '';
+  const data = await api('animales','list',{tipo,buscar,estado});
+  const tbody = document.getElementById(`table-${tipo==='bovino'?'bovinos':'avicolas'}`);
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No se encontraron animales</td></tr>'; return; }
+  tbody.innerHTML = data.map(a => `<tr>
+    <td><strong style="color:var(--accent)">${a.codigo}</strong></td>
+    <td>${a.nombre||'—'}</td><td>${a.categoria_nombre||'—'}</td><td>${a.raza||'—'}</td>
+    <td>${a.sexo||'—'}</td><td>${a.peso_actual||'—'}</td><td>${calcAge(a.fecha_nacimiento)}</td>
+    <td>${badgeHTML(a.estado)}</td>
+    <td><button class="btn btn-sm btn-secondary" onclick="viewAnimal(${a.id})">Ver</button></td>
+  </tr>`).join('');
+}
+
+async function viewAnimal(id) {
+  const a = await api('animales','get',{id});
+  if (a.error) { toast(a.error, true); return; }
+  const icon = a.tipo==='bovino' ? '🐄' : '🐔';
+  document.getElementById('animal-detail').innerHTML = `
+    <div class="detail-panel">
+      <div class="detail-header">
+        <div class="detail-avatar">${icon}</div>
+        <div class="detail-info">
+          <h2>${a.nombre||a.codigo}</h2>
+          <p>${a.codigo} · ${a.raza||''} · ${a.categoria_nombre||''} ${badgeHTML(a.estado)}</p>
+        </div>
+      </div>
+      <div class="detail-meta">
+        <div class="meta-item"><label>Sexo</label><span>${a.sexo||'—'}</span></div>
+        <div class="meta-item"><label>Peso Actual</label><span>${a.peso_actual?a.peso_actual+' kg':'—'}</span></div>
+        <div class="meta-item"><label>Fecha Nacimiento</label><span>${formatDate(a.fecha_nacimiento)}</span></div>
+        <div class="meta-item"><label>Edad</label><span>${calcAge(a.fecha_nacimiento)}</span></div>
+      </div>
+    </div>
+    <div class="detail-panel">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(this,'tab-peso')">📊 Peso</div>
+        <div class="tab" onclick="switchTab(this,'tab-vacunas')">💉 Vacunas</div>
+        <div class="tab" onclick="switchTab(this,'tab-salud-d')">🏥 Salud</div>
+        ${a.tipo==='bovino'&&a.sexo==='hembra' ? '<div class="tab" onclick="switchTab(this,\'tab-insem\')">🧬 Inseminación</div>' : ''}
+      </div>
+      <div class="tab-content active" id="tab-peso">
+        <div style="display:flex;gap:10px;margin-bottom:16px;">
+          <button class="btn btn-primary btn-sm" onclick="openPesoModal(${a.id})">＋ Registrar Peso</button>
+        </div>
+        <canvas id="chart-peso-detail" height="200"></canvas>
+        ${a.historial_peso.length ? `<table style="margin-top:12px;"><thead><tr><th>Fecha</th><th>Peso (kg)</th></tr></thead><tbody>${a.historial_peso.map(p=>`<tr><td>${formatDate(p.fecha)}</td><td>${p.peso}</td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">Sin historial</div>'}
+      </div>
+      <div class="tab-content" id="tab-vacunas">
+        ${a.vacunaciones.length ? `<table><thead><tr><th>Fecha</th><th>Vacuna</th><th>Próxima</th><th>Veterinario</th></tr></thead><tbody>${a.vacunaciones.map(v=>`<tr><td>${formatDate(v.fecha_aplicacion)}</td><td>${v.vacuna_nombre}</td><td>${formatDate(v.proxima_fecha)}</td><td>${v.veterinario||'—'}</td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">Sin vacunaciones</div>'}
+      </div>
+      <div class="tab-content" id="tab-salud-d">
+        ${a.eventos_salud?.length ? `<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Estado</th></tr></thead><tbody>${a.eventos_salud.map(e=>`<tr><td>${formatDate(e.fecha)}</td><td>${e.tipo}</td><td>${e.descripcion}</td><td>${badgeHTML(e.estado)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">Sin eventos</div>'}
+      </div>
+      <div class="tab-content" id="tab-insem">
+        ${a.inseminaciones?.length ? `<table><thead><tr><th>Fecha</th><th>Toro</th><th>Técnico</th><th>Resultado</th><th>Parto Est.</th></tr></thead><tbody>${a.inseminaciones.map(i=>`<tr><td>${formatDate(i.fecha)}</td><td>${i.toro_pajilla||'—'}</td><td>${i.tecnico||'—'}</td><td>${badgeHTML(i.resultado)}</td><td>${formatDate(i.fecha_parto_estimada)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">Sin registros</div>'}
+      </div>
+    </div>
+  `;
+  navigateTo('detalle');
+  // Weight chart
+  if (a.historial_peso.length) {
+    setTimeout(()=>{
+      buildChart('chart-peso-detail','line',a.historial_peso.map(p=>formatDate(p.fecha)),a.historial_peso.map(p=>p.peso),'Peso (kg)','rgba(74,230,142,0.15)','#4ae68e');
+    },100);
+  }
+}
+
+function switchTab(el, tabId) {
+  el.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  el.closest('.detail-panel').querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════
+async function openAnimalModal(tipo) {
+  const cats = await api('categorias','',{tipo});
+  const catOpts = cats.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  openModal(`Registrar ${tipo==='bovino'?'Bovino':'Ave/Lote'}`, `
+    <div class="form-row"><div class="form-group"><label>Código *</label><input id="f-codigo" placeholder="${tipo==='bovino'?'BOV-006':'AVE-004'}"></div>
+    <div class="form-group"><label>Nombre</label><input id="f-nombre"></div></div>
+    <div class="form-row"><div class="form-group"><label>Categoría</label><select id="f-categoria"><option value="">Seleccionar</option>${catOpts}</select></div>
+    <div class="form-group"><label>Raza</label><input id="f-raza"></div></div>
+    <div class="form-row-3"><div class="form-group"><label>Sexo</label><select id="f-sexo"><option value="">—</option><option value="macho">Macho</option><option value="hembra">Hembra</option></select></div>
+    <div class="form-group"><label>Fecha Nacimiento</label><input type="date" id="f-nacimiento"></div>
+    <div class="form-group"><label>Peso Actual (kg)</label><input type="number" step="0.01" id="f-peso"></div></div>
+    <div class="form-group"><label>Notas</label><textarea id="f-notas"></textarea></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-primary" onclick="saveAnimal('${tipo}')">Guardar</button>`);
+}
+
+async function saveAnimal(tipo) {
+  const body = {
+    codigo: document.getElementById('f-codigo').value,
+    nombre: document.getElementById('f-nombre').value,
+    categoria_id: document.getElementById('f-categoria').value || null,
+    tipo, raza: document.getElementById('f-raza').value,
+    sexo: document.getElementById('f-sexo').value || null,
+    fecha_nacimiento: document.getElementById('f-nacimiento').value || null,
+    peso_actual: document.getElementById('f-peso').value || null,
+    notas: document.getElementById('f-notas').value
+  };
+  if (!body.codigo) { toast('El código es obligatorio', true); return; }
+  if (DEMO) { toast('Animal registrado (modo demo)'); closeModal(); return; }
+  const res = await api('animales','create',{},'POST',body);
+  toast(res.message || 'Registrado');
+  closeModal();
+  loadAnimales(tipo);
+}
+
+function openPesoModal(animalId) {
+  openModal('Registrar Peso', `
+    <div class="form-row"><div class="form-group"><label>Peso (kg) *</label><input type="number" step="0.01" id="f-peso-val"></div>
+    <div class="form-group"><label>Fecha</label><input type="date" id="f-peso-fecha" value="${new Date().toISOString().split('T')[0]}"></div></div>
+    <div class="form-group"><label>Notas</label><textarea id="f-peso-notas"></textarea></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-primary" onclick="savePeso(${animalId})">Guardar</button>`);
+}
+
+async function savePeso(animalId) {
+  const body = { animal_id: animalId, peso: document.getElementById('f-peso-val').value, fecha: document.getElementById('f-peso-fecha').value, notas: document.getElementById('f-peso-notas').value };
+  if (!body.peso) { toast('Ingrese el peso', true); return; }
+  if (DEMO) { toast('Peso registrado (modo demo)'); closeModal(); return; }
+  await api('peso','',{},'POST',body);
+  toast('Peso registrado'); closeModal(); viewAnimal(animalId);
+}
+
+function openLecheModal() {
+  const vacas = DEMO_DATA.animales.filter(a=>a.tipo==='bovino'&&a.sexo==='hembra'&&a.estado==='activo');
+  openModal('Registrar Producción de Leche', `
+    <div class="form-row"><div class="form-group"><label>Vaca *</label><select id="f-leche-animal">${vacas.map(v=>`<option value="${v.id}">${v.codigo} - ${v.nombre}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Fecha</label><input type="date" id="f-leche-fecha" value="${new Date().toISOString().split('T')[0]}"></div></div>
+    <div class="form-row"><div class="form-group"><label>Litros *</label><input type="number" step="0.1" id="f-leche-litros"></div>
+    <div class="form-group"><label>Turno</label><select id="f-leche-turno"><option value="am">Mañana (AM)</option><option value="pm">Tarde (PM)</option></select></div></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-primary" onclick="saveLeche()">Guardar</button>`);
+}
+async function saveLeche() { toast('Producción registrada (modo demo)'); closeModal(); }
+
+function openHuevosModal() {
+  const lotes = DEMO_DATA.animales.filter(a=>a.tipo==='avicola'&&a.estado==='activo');
+  openModal('Registrar Producción de Huevos', `
+    <div class="form-row"><div class="form-group"><label>Lote *</label><select id="f-huevos-lote">${lotes.map(l=>`<option value="${l.id}">${l.codigo} - ${l.nombre}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Fecha</label><input type="date" id="f-huevos-fecha" value="${new Date().toISOString().split('T')[0]}"></div></div>
+    <div class="form-row-3"><div class="form-group"><label>Cantidad *</label><input type="number" id="f-huevos-cant"></div>
+    <div class="form-group"><label>Rotos</label><input type="number" id="f-huevos-rotos" value="0"></div>
+    <div class="form-group"><label>Peso Prom. (g)</label><input type="number" step="0.1" id="f-huevos-peso"></div></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-primary" onclick="saveHuevos()">Guardar</button>`);
+}
+async function saveHuevos() { toast('Producción registrada (modo demo)'); closeModal(); }
+
+async function openVacunacionModal() {
+  const animales = DEMO_DATA.animales.filter(a=>a.estado==='activo');
+  const vacunas = await api('vacunacion','vacunas');
+  openModal('Registrar Vacunación', `
+    <div class="form-row"><div class="form-group"><label>Animal *</label><select id="f-vac-animal">${animales.map(a=>`<option value="${a.id}">${a.codigo} - ${a.nombre}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Vacuna *</label><select id="f-vac-vacuna">${vacunas.map(v=>`<option value="${v.id}">${v.nombre}</option>`).join('')}</select></div></div>
+    <div class="form-row"><div class="form-group"><label>Fecha</label><input type="date" id="f-vac-fecha" value="${new Date().toISOString().split('T')[0]}"></div>
+    <div class="form-group"><label>Veterinario</label><input id="f-vac-vet"></div></div>
+    <div class="form-group"><label>Dosis</label><input id="f-vac-dosis"></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-primary" onclick="saveVacunacion()">Guardar</button>`);
+}
+async function saveVacunacion() { toast('Vacunación registrada (modo demo)'); closeModal(); }
+
+function openSaludModal() {
+  const animales = DEMO_DATA.animales.filter(a=>a.estado==='activo');
+  openModal('Registrar Evento de Salud', `
+    <div class="form-row"><div class="form-group"><label>Animal *</label><select id="f-sal-animal">${animales.map(a=>`<option value="${a.id}">${a.codigo} - ${a.nombre}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Tipo *</label><select id="f-sal-tipo"><option value="enfermedad">Enfermedad</option><option value="tratamiento">Tratamiento</option><option value="cirugia">Cirugía</option><option value="revision">Revisión</option><option value="otro">Otro</option></select></div></div>
+    <div class="form-group"><label>Descripción *</label><textarea id="f-sal-desc"></textarea></div>
+    <div class="form-row-3"><div class="form-group"><label>Fecha</label><input type="date" id="f-sal-fecha" value="${new Date().toISOString().split('T')[0]}"></div>
+    <div class="form-group"><label>Veterinario</label><input id="f-sal-vet"></div>
+    <div class="form-group"><label>Costo</label><input type="number" step="0.01" id="f-sal-costo" value="0"></div></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-primary" onclick="saveSalud()">Guardar</button>`);
+}
+async function saveSalud() { toast('Evento registrado (modo demo)'); closeModal(); }
+
+function openInseminacionModal() {
+  const hembras = DEMO_DATA.animales.filter(a=>a.tipo==='bovino'&&a.sexo==='hembra'&&a.estado==='activo');
+  openModal('Registrar Inseminación', `
+    <div class="form-row"><div class="form-group"><label>Vaca *</label><select id="f-ins-animal">${hembras.map(a=>`<option value="${a.id}">${a.codigo} - ${a.nombre}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Fecha</label><input type="date" id="f-ins-fecha" value="${new Date().toISOString().split('T')[0]}"></div></div>
+    <div class="form-row"><div class="form-group"><label>Toro / Pajilla</label><input id="f-ins-toro"></div>
+    <div class="form-group"><label>Técnico</label><input id="f-ins-tec"></div></div>
+    <div class="form-group"><label>Notas</label><textarea id="f-ins-notas"></textarea></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-primary" onclick="saveInseminacion()">Guardar</button>`);
+}
+async function saveInseminacion() { toast('Inseminación registrada (modo demo)'); closeModal(); }
+
+// ═══════════════════════════════════════════════
+// LOAD SECTIONS
+// ═══════════════════════════════════════════════
+async function loadLeche() {
+  const data = await api('leche');
+  const tbody = document.getElementById('table-leche');
+  tbody.innerHTML = data.map(l=>`<tr><td>${formatDate(l.fecha)}</td><td>${l.animal_nombre} (${l.codigo})</td><td><strong>${Number(l.cantidad_litros).toFixed(1)}</strong></td><td>${l.turno?.toUpperCase()||'—'}</td><td>${l.calidad||'normal'}</td></tr>`).join('');
+  // Chart
+  const byDate = {};
+  data.forEach(l=>{ byDate[l.fecha] = (byDate[l.fecha]||0) + Number(l.cantidad_litros); });
+  const sorted = Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
+  buildChart('chart-leche-detail','bar',sorted.map(s=>s[0].substring(5)),sorted.map(s=>Math.round(s[1]*10)/10),'Litros','rgba(74,230,142,0.3)','#4ae68e');
+}
+
+async function loadHuevos() {
+  const data = await api('huevos');
+  const tbody = document.getElementById('table-huevos');
+  tbody.innerHTML = data.map(h=>`<tr><td>${formatDate(h.fecha)}</td><td>${h.lote_nombre||'—'} (${h.codigo||''})</td><td><strong>${h.cantidad}</strong></td><td>${h.rotos}</td><td>${Number(h.peso_promedio||0).toFixed(1)}</td></tr>`).join('');
+  const byDate = {};
+  data.forEach(h=>{ byDate[h.fecha] = (byDate[h.fecha]||0) + h.cantidad; });
+  const sorted = Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
+  buildChart('chart-huevos-detail','bar',sorted.map(s=>s[0].substring(5)),sorted.map(s=>s[1]),'Huevos','rgba(230,169,74,0.3)','#e6a94a');
+}
+
+async function loadVacunacion() {
+  const proximas = await api('reportes','vacunas_proximas');
+  document.getElementById('table-vacunas-proximas').innerHTML = proximas.length ? proximas.map(v=>`<tr><td>${v.animal_nombre} (${v.codigo})</td><td>${v.vacuna_nombre}</td><td style="color:var(--warn)">${formatDate(v.proxima_fecha)}</td></tr>`).join('') : '<tr><td colspan="3" class="empty-state">Sin vacunas próximas</td></tr>';
+  document.getElementById('table-vacunaciones').innerHTML = demoVacunaciones.map(v=>`<tr><td>${formatDate(v.fecha_aplicacion)}</td><td>${v.animal_nombre}</td><td>${v.vacuna_nombre}</td><td>${v.veterinario}</td></tr>`).join('');
+}
+
+async function loadInseminacion() {
+  const data = await api('inseminacion');
+  document.getElementById('table-inseminacion').innerHTML = data.map(i=>`<tr>
+    <td>${formatDate(i.fecha)}</td><td>${i.animal_nombre} (${i.codigo})</td><td>${i.toro_pajilla||'—'}</td>
+    <td>${i.tecnico||'—'}</td><td>${badgeHTML(i.resultado)}</td><td>${formatDate(i.fecha_parto_estimada)}</td>
+    <td>${i.resultado==='pendiente'?`<button class="btn btn-sm btn-secondary" onclick="updateInseminacion(${i.id})">Actualizar</button>`:''}</td>
+  </tr>`).join('');
+}
+
+function updateInseminacion(id) {
+  openModal('Actualizar Resultado', `
+    <div class="form-group"><label>Resultado</label><select id="f-upd-res"><option value="exitosa">Exitosa</option><option value="fallida">Fallida</option></select></div>
+    <div class="form-group"><label>Fecha Verificación</label><input type="date" id="f-upd-fecha" value="${new Date().toISOString().split('T')[0]}"></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-primary" onclick="toast('Actualizado (demo)');closeModal();">Guardar</button>`);
+}
+
+async function loadReportes() {
+  const inv = await api('reportes','inventario_general');
+  document.getElementById('reporte-inv').innerHTML = inv.map(i=>`
+    <div class="stat-card"><div class="stat-icon ${i.tipo==='bovino'?'icon-green':'icon-blue'}">${i.tipo==='bovino'?'🐄':'🐔'}</div>
+    <div class="stat-value">${i.total}</div><div class="stat-label">${i.tipo} — ${i.estado}</div></div>
+  `).join('');
+  const lecheMes = await api('reportes','produccion_leche_mensual');
+  buildChart('chart-leche-mensual','bar',lecheMes.map(l=>(l.mes||'').substring(0,7)),lecheMes.map(l=>l.total),'Litros','rgba(74,230,142,0.3)','#4ae68e');
+  const huevosMes = await api('reportes','produccion_huevos_mensual');
+  buildChart('chart-huevos-mensual','bar',huevosMes.map(h=>(h.mes||'').substring(0,7)),huevosMes.map(h=>h.total),'Huevos','rgba(230,169,74,0.3)','#e6a94a');
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+document.getElementById('current-date').textContent = new Date().toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const d30 = new Date(); d30.setDate(d30.getDate()-30);
+['leche-desde','huevos-desde'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=d30.toISOString().split('T')[0]; });
+['leche-hasta','huevos-hasta'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=new Date().toISOString().split('T')[0]; });
+
+loadDashboard();
+</script>
+</body>
+</html>
